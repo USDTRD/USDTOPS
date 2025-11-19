@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDTOPS - Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div style="padding: 40px; text-align: center;">
+        <h1 style="color: white; font-size: 48px;">USDT<span style="color: #10b981;">OPS</span></h1>
+        <p style="color: #94a3b8; margin: 20px 0;">Dashboard Test - Sin Firebase</p>
+        
+        <button onclick="testClick()" style="padding: 15px 30px; background: #10b981; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 10px;">
+            Click para probar JavaScript
+        </button>
+        
+        <div id="result" style="margin-top: 20px; padding: 20px; background: #1e293b; border-radius: 8px; color: white;">
+            Esperando click...
+        </div>
+        
+        <a href="login.html" style="display: inline-block; margin-top: 20px; color: #10b981; text-decoration: none;">← Volver al Login</a>
+    </div>
+    
+    <script>
+        console.log('Test script loaded!');
+        
+        function testClick() {
+            console.log('Button clicked!');
+            document.getElementById('result').innerHTML = '✅ JavaScript funciona correctamente!<br>Fecha: ' + new Date().toLocaleString();
+            alert('¡JavaScript funciona!');
+        }
+        
+        // Test automático al cargar
+        setTimeout(() => {
+            document.getElementById('result').innerHTML = '✅ Script cargó automáticamente<br>Hora: ' + new Date().toLocaleTimeString();
+        }, 1000);
+    </script>
+</body>
+</html>
