@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Crear Usuario</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        h1 span {
+            color: #10b981;
+        }
+
+        p {
+            color: #94a3b8;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #f1f5f9;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background: #059669;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .success-message, .error-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
+            color: #10b981;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .success-message.show, .error-message.show {
+            display: block;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #10b981;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>USDT<span>OPS</span></h1>
+        <p>Administración - Crear Usuario</p>
+
+        <div class="success-message" id="success-message"></div>
+        <div class="error-message" id="error-message"></div>
+
+        <form id="create-user-form">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required>
+            </div>
+
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" required minlength="6">
+            </div>
+
+            <div class="form-group">
+                <label>Rol</label>
+                <select id="role" required>
+                    <option value="admin">Admin (Ve todo)</option>
+                    <option value="partner">Socio (Solo Rusos)</option>
+                </select>
+            </div>
+
+            <button type="submit" id="submit-btn">Crear Usuario</button>
+        </form>
+
+        <a href="dashboard.html" class="back-link">← Volver al Dashboard</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjTKdT_czpEUGWr7BI7YXlxElhXHiV5n4",
+            authDomain: "usdtops.firebaseapp.com",
+            projectId: "usdtops",
+            storageBucket: "usdtops.firebasestorage.app",
+            messagingSenderId: "983622693334",
+            appId: "1:983622693334:web:332aefaee4628e3d0c3477"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        document.getElementById('create-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            const submitBtn = document.getElementById('submit-btn');
+            const successMsg = document.getElementById('success-message');
+            const errorMsg = document.getElementById('error-message');
+
+            successMsg.classList.remove('show');
+            errorMsg.classList.remove('show');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creando usuario...';
+
+            try {
+                // Crear usuario en Authentication
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Guardar datos del usuario en Firestore
+                await addDoc(collection(db, 'users'), {
+                    uid: user.uid,
+                    email: email,
+                    name: name,
+                    role: role,
+                    createdAt: new Date().toISOString()
+                });
+
+                successMsg.textContent = `Usuario ${name} creado exitosamente como ${role === 'admin' ? 'Admin' : 'Socio'}`;
+                successMsg.classList.add('show');
+
+                // Limpiar formulario
+                document.getElementById('create-user-form').reset();
+
+            } catch (error) {
+                console.error('Error:', error);
+                let message = 'Error al crear usuario';
+
+                if (error.code === 'auth/email-already-in-use') {
+                    message = 'Este email ya está registrado';
+                } else if (error.code === 'auth/weak-password') {
+                    message = 'La contraseña debe tener al menos 6 caracteres';
+                } else if (error.code === 'auth/invalid-email') {
+                    message = 'Email inválido';
+                }
+
+                errorMsg.textContent = message;
+                errorMsg.classList.add('show');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Crear Usuario';
+            }
+        });
+    </script>
+</body>
+</html>
