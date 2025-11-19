@@ -200,22 +200,110 @@ function filterByPeriod(data, period) {
 }
 
 function renderRecentTransactions() {
-    const tbody = document.getElementById('recent-transactions-body');
-    if (!tbody) return;
+    const container = document.getElementById('recent-transactions-list');
+    if (!container) return;
     
     const recent = transactions.slice(-5).reverse();
     
-    tbody.innerHTML = recent.map(t => `
-        <tr>
-            <td>${formatDate(t.date)}</td>
-            <td><span class="type-badge ${t.type}">${getTypeLabel(t.type)}</span></td>
-            <td>${formatCurrency(t.usdtAmount)}</td>
-            <td>${t.rate ? t.rate.toFixed(2) : '-'}</td>
-            <td class="profit-positive">${formatCurrency(t.profit)}</td>
-            <td>${getLiquidationStatus(t)}</td>
-            <td><span class="status-badge ${t.status}">${getStatusLabel(t.status)}</span></td>
-        </tr>
-    `).join('');
+    container.innerHTML = recent.map(t => createTransactionItem(t, false)).join('');
+    
+    // Agregar event listeners para expandir/contraer
+    container.querySelectorAll('.transaction-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // No expandir si se clickeó un botón
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                return;
+            }
+            this.classList.toggle('expanded');
+        });
+    });
+}
+
+function createTransactionItem(t, showActions = true) {
+    const liquidationBtn = (t.type === 'betcris' || t.type === 'rusos') && !t.liquidated 
+        ? `<button class="btn-liquidate" onclick="event.stopPropagation(); liquidateTransaction(${t.id})">Liquidar</button>`
+        : '';
+    
+    const liquidationStatus = t.liquidated 
+        ? '<span class="status-badge completed">Liquidado</span>'
+        : (t.type === 'betcris' || t.type === 'rusos' ? '<span class="status-badge pending">Pendiente</span>' : '-');
+    
+    return `
+        <div class="transaction-item" data-id="${t.id}">
+            <div class="transaction-summary">
+                <div class="transaction-main">
+                    <div class="transaction-header">
+                        <span class="type-badge ${t.type}">${getTypeLabel(t.type)}</span>
+                        <span class="transaction-date">${formatDateShort(t.date)}</span>
+                    </div>
+                    <div class="transaction-client">${t.client}</div>
+                    <div class="transaction-amounts">
+                        <span class="transaction-amount">${formatCurrency(t.usdtAmount)}</span>
+                        <span class="transaction-profit">+${formatCurrency(t.profit)}</span>
+                    </div>
+                </div>
+                <div class="transaction-arrow">›</div>
+            </div>
+            <div class="transaction-details">
+                <div class="detail-grid">
+                    ${t.dopAmount ? `
+                    <div class="detail-item">
+                        <span class="detail-label">Monto RD$</span>
+                        <span class="detail-value">RD$ ${t.dopAmount.toLocaleString()}</span>
+                    </div>` : ''}
+                    ${t.rate ? `
+                    <div class="detail-item">
+                        <span class="detail-label">Tasa</span>
+                        <span class="detail-value">${t.rate.toFixed(2)}</span>
+                    </div>` : ''}
+                    <div class="detail-item">
+                        <span class="detail-label">Liquidación</span>
+                        <span class="detail-value">${liquidationStatus}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Estado</span>
+                        <span class="detail-value"><span class="status-badge ${t.status}">${getStatusLabel(t.status)}</span></span>
+                    </div>
+                    ${t.notes ? `
+                    <div class="detail-item" style="grid-column: 1 / -1;">
+                        <span class="detail-label">Notas</span>
+                        <span class="detail-value">${t.notes}</span>
+                    </div>` : ''}
+                </div>
+                ${showActions ? `
+                <div class="transaction-actions">
+                    ${liquidationBtn}
+                    <button class="btn-secondary" onclick="event.stopPropagation(); editTransaction(${t.id})">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M11.333 2A1.886 1.886 0 0114 4.667l-9 9-3.667 1 1-3.667 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Editar
+                    </button>
+                    <button class="btn-secondary" style="color: var(--danger);" onclick="event.stopPropagation(); deleteTransaction(${t.id})">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Eliminar
+                    </button>
+                </div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function formatDateShort(dateString) {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Hoy ' + date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Ayer ' + date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+    } else {
+        return date.toLocaleDateString('es', { day: '2-digit', month: 'short' });
+    }
 }
 
 function getLiquidationStatus(transaction) {
@@ -230,36 +318,23 @@ function getLiquidationStatus(transaction) {
 }
 
 function renderAllTransactions() {
-    const tbody = document.getElementById('transactions-body');
-    if (!tbody) return;
+    const container = document.getElementById('transactions-list');
+    if (!container) return;
     
     const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    tbody.innerHTML = sorted.map(t => `
-        <tr>
-            <td>${formatDate(t.date)}</td>
-            <td><span class="type-badge ${t.type}">${getTypeLabel(t.type)}</span></td>
-            <td>${t.client}</td>
-            <td>${formatCurrency(t.usdtAmount)}</td>
-            <td>RD$ ${t.dopAmount ? t.dopAmount.toLocaleString() : '-'}</td>
-            <td>${t.rate ? t.rate.toFixed(2) : '-'}</td>
-            <td class="profit-positive">${formatCurrency(t.profit)}</td>
-            <td>${getLiquidationStatus(t)}</td>
-            <td><span class="status-badge ${t.status}">${getStatusLabel(t.status)}</span></td>
-            <td>
-                <button class="action-btn" onclick="editTransaction(${t.id})" title="Editar">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M11.333 2A1.886 1.886 0 0114 4.667l-9 9-3.667 1 1-3.667 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <button class="action-btn danger" onclick="deleteTransaction(${t.id})" title="Eliminar">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    container.innerHTML = sorted.map(t => createTransactionItem(t, true)).join('');
+    
+    // Agregar event listeners para expandir/contraer
+    container.querySelectorAll('.transaction-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // No expandir si se clickeó un botón
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                return;
+            }
+            this.classList.toggle('expanded');
+        });
+    });
 }
 
 function liquidateTransaction(id) {
@@ -283,40 +358,28 @@ function filterTransactions() {
     
     const filtered = transactions.filter(t => {
         const matchesSearch = t.client.toLowerCase().includes(searchTerm) || 
-                            t.notes.toLowerCase().includes(searchTerm);
+                            (t.notes && t.notes.toLowerCase().includes(searchTerm));
         const matchesType = !typeFilter || t.type === typeFilter;
         return matchesSearch && matchesType;
     });
     
-    const tbody = document.getElementById('transactions-body');
-    if (!tbody) return;
+    const container = document.getElementById('transactions-list');
+    if (!container) return;
     
     const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    tbody.innerHTML = sorted.map(t => `
-        <tr>
-            <td>${formatDate(t.date)}</td>
-            <td><span class="type-badge ${t.type}">${getTypeLabel(t.type)}</span></td>
-            <td>${t.client}</td>
-            <td>${formatCurrency(t.usdtAmount)}</td>
-            <td>RD$ ${t.dopAmount.toLocaleString()}</td>
-            <td>${t.rate.toFixed(2)}</td>
-            <td class="profit-positive">${formatCurrency(t.profit)}</td>
-            <td><span class="status-badge ${t.status}">${getStatusLabel(t.status)}</span></td>
-            <td>
-                <button class="action-btn" onclick="editTransaction(${t.id})">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M11.333 2A1.886 1.886 0 0114 4.667l-9 9-3.667 1 1-3.667 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <button class="action-btn danger" onclick="deleteTransaction(${t.id})">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    container.innerHTML = sorted.map(t => createTransactionItem(t, true)).join('');
+    
+    // Agregar event listeners para expandir/contraer
+    container.querySelectorAll('.transaction-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // No expandir si se clickeó un botón
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                return;
+            }
+            this.classList.toggle('expanded');
+        });
+    });
 }
 
 function initCharts() {
