@@ -2,35 +2,65 @@
 let transactions = [];
 let currentUser = null;
 let userRole = 'admin'; // 'admin' o 'partner'
+let firebaseReady = false;
 
 // Esperar a que Firebase esté listo
 window.initializeAppAfterAuth = function() {
     currentUser = window.currentUser;
+    console.log('Firebase ready, current user:', currentUser.email);
     initializeApp();
 };
 
 // Inicializar la app
 async function initializeApp() {
+    console.log('Initializing app...');
+    
+    // Primero setup event listeners
     setupEventListeners();
-    await loadUserProfile();
-    await loadTransactions();
+    
+    // Mostrar UI inmediatamente
     updateDashboard();
     renderRecentTransactions();
     renderAllTransactions();
     initCharts();
+    
+    // Luego cargar datos de Firebase
+    try {
+        await loadUserProfile();
+        await loadTransactions();
+    } catch (error) {
+        console.error('Error loading Firebase data:', error);
+        alert('Error al cargar datos. Por favor recarga la página.');
+    }
 }
 
 async function loadUserProfile() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('No current user');
+        return;
+    }
+    
+    console.log('Loading user profile...');
     
     try {
+        if (!window.firebaseDb || !window.firebaseCollection) {
+            console.error('Firebase not ready');
+            return;
+        }
+        
         const usersRef = window.firebaseCollection(window.firebaseDb, 'users');
         const q = window.firebaseQuery(usersRef, window.firebaseWhere('email', '==', currentUser.email));
         const querySnapshot = await window.firebaseGetDocs(q);
         
+        console.log('User query complete, docs found:', querySnapshot.size);
+        console.log('User query complete, docs found:', querySnapshot.size);
+        
         if (!querySnapshot.empty) {
             const userData = querySnapshot.docs[0].data();
             userRole = userData.role || 'admin';
+            
+            console.log('User role:', userRole);
+            
             document.getElementById('user-name').textContent = userData.name || currentUser.email.split('@')[0];
             document.getElementById('user-role').textContent = userRole === 'admin' ? 'Admin' : 'Socio';
             
@@ -38,6 +68,8 @@ async function loadUserProfile() {
             if (userRole === 'partner') {
                 hideAdminSections();
             }
+        } else {
+            console.log('No user document found');
         }
     } catch (error) {
         console.error('Error loading user profile:', error);
@@ -56,17 +88,28 @@ function hideAdminSections() {
 }
 
 async function loadTransactions() {
+    console.log('Loading transactions...');
+    
     try {
+        if (!window.firebaseDb || !window.firebaseCollection) {
+            console.error('Firebase not ready for transactions');
+            return;
+        }
+        
         const transactionsRef = window.firebaseCollection(window.firebaseDb, 'transactions');
         let q = transactionsRef;
         
         // Si es socio, solo cargar transacciones de tipo 'rusos'
         if (userRole === 'partner') {
+            console.log('Partner mode - filtering rusos only');
             q = window.firebaseQuery(transactionsRef, window.firebaseWhere('type', '==', 'rusos'));
         }
         
+        console.log('Setting up snapshot listener...');
+        
         // Escuchar cambios en tiempo real
         window.firebaseOnSnapshot(q, (snapshot) => {
+            console.log('Snapshot received, docs:', snapshot.size);
             transactions = [];
             snapshot.forEach((doc) => {
                 transactions.push({
@@ -75,10 +118,13 @@ async function loadTransactions() {
                 });
             });
             
+            console.log('Transactions loaded:', transactions.length);
             updateDashboard();
             renderRecentTransactions();
             renderAllTransactions();
             initCharts();
+        }, (error) => {
+            console.error('Snapshot error:', error);
         });
     } catch (error) {
         console.error('Error loading transactions:', error);
