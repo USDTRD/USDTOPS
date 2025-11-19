@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDTOPS - Dashboard</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema de gestión de operaciones USDT">
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="USDTOPS">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase v9 compat (sin módulos) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        console.log('Loading Firebase...');
+        
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjTKdT_czpEUGWr7BI7YXlxElhXHiV5n4",
+            authDomain: "usdtops.firebaseapp.com",
+            projectId: "usdtops",
+            storageBucket: "usdtops.firebasestorage.app",
+            messagingSenderId: "983622693334",
+            appId: "1:983622693334:web:332aefaee4628e3d0c3477"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        console.log('Firebase initialized');
+
+        // Make available globally
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            console.log('Auth state changed:', user ? user.email : 'no user');
+            
+            if (!user) {
+                console.log('No user, redirecting to login');
+                window.location.href = 'login.html';
+            } else {
+                console.log('User logged in:', user.email);
+                window.currentUser = user;
+                
+                // Load app.js
+                console.log('Loading app.js...');
+                const script = document.createElement('script');
+                script.src = 'app.js';
+                script.onload = () => {
+                    console.log('App.js loaded successfully');
+                    if (window.initializeAppAfterAuth) {
+                        console.log('Calling initializeAppAfterAuth');
+                        window.initializeAppAfterAuth();
+                    } else {
+                        console.error('initializeAppAfterAuth not found!');
+                    }
+                };
+                script.onerror = () => {
+                    console.error('Failed to load app.js');
+                };
+                document.head.appendChild(script);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>USDT<span>OPS</span></h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <rect x="2" y="2" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="11" y="2" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="2" y="11" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                        <rect x="11" y="11" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" data-page="transactions">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Transacciones
+                </a>
+                <a href="#" class="nav-item" data-page="reports">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M4 16V4h12v12H4z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M7 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Reportes
+                </a>
+            </nav>
+            <div class="user-profile">
+                <div class="user-avatar">P</div>
+                <div class="user-info">
+                    <div class="user-name" id="user-name">Pedro</div>
+                    <div class="user-role" id="user-role">Admin</div>
+                </div>
+                <button class="logout-btn" onclick="logout()" title="Cerrar sesión">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M7 19H3a2 2 0 01-2-2V3a2 2 0 012-2h4M14 15l5-5-5-5M19 10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div class="page" id="dashboard-page">
+                <div class="page-header">
+                    <h2>Dashboard</h2>
+                    <div class="header-actions">
+                        <select class="period-selector">
+                            <option value="today">Hoy</option>
+                            <option value="week">Esta Semana</option>
+                            <option value="month" selected>Este Mes</option>
+                            <option value="year">Este Año</option>
+                        </select>
+                        <button class="btn-primary" onclick="showAddTransaction()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Nueva Transacción
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Balance Total</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>
+                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="total-balance">$0.00</div>
+                        <div class="stat-change positive">
+                            <span>+12.5%</span>
+                            <span>vs mes anterior</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Ganancias del Mes</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#10b981" stroke-width="2" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="month-profit">$0.00</div>
+                        <div class="stat-change positive">
+                            <span>+8.2%</span>
+                            <span>vs mes anterior</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Transacciones</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M7 16V4M12 16V8M17 16v-5" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="transaction-count">0</div>
+                        <div class="stat-change positive">
+                            <span>+15</span>
+                            <span>este mes</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Margen Promedio</span>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="#10b981" stroke-width="2"/>
+                                <path d="M12 6v6l4 2" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="avg-margin">0%</div>
+                        <div class="stat-change positive">
+                            <span>+0.5%</span>
+                            <span>vs mes anterior</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Ganancias Mensuales</h3>
+                            <select class="chart-filter">
+                                <option value="6">Últimos 6 meses</option>
+                                <option value="12" selected>Últimos 12 meses</option>
+                            </select>
+                        </div>
+                        <canvas id="profitChart"></canvas>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Distribución por Tipo</h3>
+                        </div>
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="recent-transactions">
+                    <div class="section-header">
+                        <h3>Transacciones Recientes</h3>
+                        <a href="#" class="link" onclick="switchPage('transactions'); return false;">Ver todas</a>
+                    </div>
+                    <div class="transactions-list" id="recent-transactions-list">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Page -->
+            <div class="page hidden" id="transactions-page">
+                <div class="page-header">
+                    <h2>Transacciones</h2>
+                    <div class="header-actions">
+                        <input type="text" placeholder="Buscar..." class="search-input" id="search-input">
+                        <select class="filter-selector" id="type-filter">
+                            <option value="">Todos los tipos</option>
+                            <option value="betcris">Betcris</option>
+                            <option value="rusos">Rusos</option>
+                            <option value="general">General</option>
+                        </select>
+                        <button class="btn-primary" onclick="showAddTransaction()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Nueva Transacción
+                        </button>
+                    </div>
+                </div>
+
+                <div class="transactions-list" id="transactions-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div class="page hidden" id="reports-page">
+                <div class="page-header">
+                    <h2>Reportes</h2>
+                    <div class="header-actions">
+                        <select class="period-selector">
+                            <option value="month">Este Mes</option>
+                            <option value="quarter">Este Trimestre</option>
+                            <option value="year">Este Año</option>
+                        </select>
+                        <button class="btn-secondary" onclick="generatePDF()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M4 6l4 4 4-4M8 10V2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Descargar PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-summary">
+                    <h3>Resumen del Período</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Transacciones</span>
+                            <span class="summary-value" id="report-total-transactions">0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total USDT Procesado</span>
+                            <span class="summary-value" id="report-total-usdt">$0.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Ganancias</span>
+                            <span class="summary-value positive" id="report-total-profit">$0.00</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Margen Promedio</span>
+                            <span class="summary-value" id="report-avg-margin">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para agregar transacción -->
+    <div class="modal hidden" id="add-transaction-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nueva Transacción</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="transaction-form" onsubmit="addTransaction(event)">
+                <div class="form-group">
+                    <label>Tipo de Transacción</label>
+                    <select name="type" id="transaction-type" required onchange="updateFormFields()">
+                        <option value="">Seleccionar...</option>
+                        <option value="betcris">Betcris</option>
+                        <option value="rusos">Rusos</option>
+                        <option value="general">General</option>
+                    </select>
+                </div>
+
+                <!-- Campos para BETCRIS -->
+                <div id="betcris-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Tipo de Operación</label>
+                        <select name="betcris_operation" id="betcris_operation" onchange="updateBetcrisFields()">
+                            <option value="">Seleccionar...</option>
+                            <option value="cobro">Cobro (Recojo dinero)</option>
+                            <option value="compra">Compra (Les compro USDT)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Oficina/Sucursal</label>
+                        <input type="text" name="betcris_office">
+                    </div>
+
+                    <!-- Campos para COBRO -->
+                    <div id="betcris-cobro-fields" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>RD$ Recibidos</label>
+                                <input type="number" name="betcris_dop" step="0.01" onchange="calculateBetcris()">
+                            </div>
+                            <div class="form-group">
+                                <label>USD Recibidos</label>
+                                <input type="number" name="betcris_usd" step="0.01" onchange="calculateBetcris()">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tasa RD$/USD</label>
+                            <input type="number" name="betcris_rate" step="0.01" onchange="calculateBetcris()">
+                        </div>
+
+                        <div class="result-box">
+                            <div class="result-item">
+                                <span>Total USD:</span>
+                                <strong id="betcris_total_usd">$0.00</strong>
+                            </div>
+                            <div class="result-item">
+                                <span>USDT a Liquidar:</span>
+                                <strong id="betcris_usdt">$0.00</strong>
+                            </div>
+                            <div class="result-item success">
+                                <span>Tu Ganancia (3%):</span>
+                                <strong id="betcris_profit">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos para COMPRA -->
+                    <div id="betcris-compra-fields" class="hidden">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Cantidad USDT</label>
+                                <input type="number" name="betcris_compra_usdt" step="0.01" onchange="calculateBetcrisCompra()">
+                            </div>
+                            <div class="form-group">
+                                <label>% Costo</label>
+                                <input type="number" name="betcris_compra_percent" step="0.01" onchange="calculateBetcrisCompra()">
+                            </div>
+                        </div>
+
+                        <div class="result-box">
+                            <div class="result-item">
+                                <span>Costo Total:</span>
+                                <strong id="betcris_compra_cost">$0.00</strong>
+                            </div>
+                            <div class="result-item success">
+                                <span>Tu Ganancia:</span>
+                                <strong id="betcris_compra_profit">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos para RUSOS -->
+                <div id="rusos-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <input type="text" name="rusos_client">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>USDT Recibidos</label>
+                            <input type="number" name="rusos_usdt" step="0.01" onchange="calculateRusos()">
+                        </div>
+                        <div class="form-group">
+                            <label>% Margen Cobrado</label>
+                            <input type="number" name="rusos_margin" step="0.01" onchange="calculateRusos()">
+                        </div>
+                    </div>
+
+                    <div class="result-box">
+                        <div class="result-item">
+                            <span>Ganancia Total:</span>
+                            <strong id="rusos_total_profit">$0.00</strong>
+                        </div>
+                        <div class="result-item success">
+                            <span>Tu Parte (50%):</span>
+                            <strong id="rusos_your_part">$0.00</strong>
+                        </div>
+                        <div class="result-item">
+                            <span>Parte Socio (50%):</span>
+                            <strong id="rusos_partner_part">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos para GENERAL -->
+                <div id="general-fields" class="hidden">
+                    <div class="form-group">
+                        <label>Tipo de Operación</label>
+                        <select name="general_operation" onchange="calculateGeneral()">
+                            <option value="">Seleccionar...</option>
+                            <option value="compra">Compra (Yo compro USDT)</option>
+                            <option value="venta">Venta (Yo vendo USDT)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cliente/Contacto</label>
+                        <input type="text" name="general_client">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cantidad USDT</label>
+                            <input type="number" name="general_usdt" step="0.01" onchange="calculateGeneral()">
+                        </div>
+                        <div class="form-group">
+                            <label>Moneda de Pago</label>
+                            <select name="general_currency" onchange="calculateGeneral()">
+                                <option value="usd">USD</option>
+                                <option value="dop">RD$</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Monto Pagado/Recibido</label>
+                            <input type="number" name="general_amount" step="0.01" onchange="calculateGeneral()">
+                        </div>
+                        <div class="form-group" id="general_rate_field">
+                            <label>Tasa RD$/USD (si aplica)</label>
+                            <input type="number" name="general_rate" step="0.01" onchange="calculateGeneral()">
+                        </div>
+                    </div>
+
+                    <div class="result-box">
+                        <div class="result-item">
+                            <span>Valor en USD:</span>
+                            <strong id="general_usd_value">$0.00</strong>
+                        </div>
+                        <div class="result-item success">
+                            <span>Tu Ganancia:</span>
+                            <strong id="general_profit">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="datetime-local" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Notas (opcional)</label>
+                    <textarea name="notes" rows="3"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar Transacción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
