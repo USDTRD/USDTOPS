@@ -169,25 +169,10 @@
                 <div class="recent-transactions">
                     <div class="section-header">
                         <h3>Transacciones Recientes</h3>
-                        <a href="#" class="link" onclick="switchPage('transactions')">Ver todas</a>
+                        <a href="#" class="link" onclick="switchPage('transactions'); return false;">Ver todas</a>
                     </div>
-                    <div class="transactions-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Tipo</th>
-                                    <th>Monto</th>
-                                    <th>Tasa</th>
-                                    <th>Ganancia</th>
-                                    <th>Liquidación</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-transactions-body">
-                                <!-- Se llena dinámicamente -->
-                            </tbody>
-                        </table>
+                    <div class="transactions-list" id="recent-transactions-list">
+                        <!-- Se llena dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -213,26 +198,8 @@
                     </div>
                 </div>
 
-                <div class="transactions-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Tipo</th>
-                                <th>Cliente/Fuente</th>
-                                <th>Monto USDT</th>
-                                <th>Monto RD$</th>
-                                <th>Tasa</th>
-                                <th>Ganancia</th>
-                                <th>Liquidación</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactions-body">
-                            <!-- Se llena dinámicamente -->
-                        </tbody>
-                    </table>
+                <div class="transactions-list" id="transactions-list">
+                    <!-- Se llena dinámicamente -->
                 </div>
             </div>
 
