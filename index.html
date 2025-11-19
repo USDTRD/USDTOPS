@@ -4,11 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>USDTOPS</title>
-    <script>
-        window.location.href = 'login.html';
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema de gestión de operaciones USDT">
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="USDTOPS">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDjTKdT_czpEUGWr7BI7YXlxElhXHiV5n4",
+            authDomain: "usdtops.firebaseapp.com",
+            projectId: "usdtops",
+            storageBucket: "usdtops.firebasestorage.app",
+            messagingSenderId: "983622693334",
+            appId: "1:983622693334:web:332aefaee4628e3d0c3477"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Check authentication and redirect
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in, load dashboard content
+                window.location.replace('dashboard.html');
+            } else {
+                // User is not logged in, redirect to login
+                window.location.replace('login.html');
+            }
+        });
     </script>
 </head>
-<body>
-    <p>Redirigiendo...</p>
+<body style="margin: 0; padding: 40px; background: #0f172a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div style="text-align: center;">
+        <h1 style="font-size: 48px; margin-bottom: 16px;">USDT<span style="color: #10b981;">OPS</span></h1>
+        <p style="color: #94a3b8;">Cargando...</p>
+    </div>
 </body>
 </html>
