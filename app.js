@@ -1,90 +1,98 @@
-// Database simulada en localStorage
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+// Database en Firebase
+let transactions = [];
+let currentUser = null;
+let userRole = 'admin'; // 'admin' o 'partner'
+
+// Esperar a que Firebase esté listo
+window.initializeAppAfterAuth = function() {
+    currentUser = window.currentUser;
+    initializeApp();
+};
 
 // Inicializar la app
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+async function initializeApp() {
     setupEventListeners();
-});
-
-function initializeApp() {
-    // Si no hay datos, crear datos de ejemplo
-    if (transactions.length === 0) {
-        createSampleData();
-    }
-    
+    await loadUserProfile();
+    await loadTransactions();
     updateDashboard();
     renderRecentTransactions();
     renderAllTransactions();
     initCharts();
 }
 
-function createSampleData() {
-    const sampleTransactions = [
-        {
-            id: Date.now() + 1,
-            date: new Date(2024, 10, 15, 10, 30).toISOString(),
-            type: 'betcris',
-            client: 'Betcris Santo Domingo',
-            usdtAmount: 5000,
-            dopAmount: 300000,
-            rate: 60.00,
-            profit: 5000,
-            status: 'completed',
-            notes: 'Cobro semanal regular'
-        },
-        {
-            id: Date.now() + 2,
-            date: new Date(2024, 10, 16, 14, 0).toISOString(),
-            type: 'rusos',
-            client: 'Dmitri Ivanov',
-            usdtAmount: 10000,
-            dopAmount: 595000,
-            rate: 59.50,
-            profit: 15000,
-            status: 'completed',
-            notes: 'Cliente regular VIP'
-        },
-        {
-            id: Date.now() + 3,
-            date: new Date(2024, 10, 17, 9, 15).toISOString(),
-            type: 'general',
-            client: 'Juan Pérez',
-            usdtAmount: 2000,
-            dopAmount: 119000,
-            rate: 59.50,
-            profit: 3000,
-            status: 'completed',
-            notes: 'Transacción rápida'
-        },
-        {
-            id: Date.now() + 4,
-            date: new Date(2024, 10, 17, 16, 45).toISOString(),
-            type: 'betcris',
-            client: 'Betcris Santiago',
-            usdtAmount: 3500,
-            dopAmount: 210000,
-            rate: 60.00,
-            profit: 3500,
-            status: 'completed',
-            notes: 'Cobro mensual'
-        },
-        {
-            id: Date.now() + 5,
-            date: new Date(2024, 10, 18, 11, 0).toISOString(),
-            type: 'rusos',
-            client: 'Sergei Petrov',
-            usdtAmount: 15000,
-            dopAmount: 892500,
-            rate: 59.50,
-            profit: 22500,
-            status: 'pending',
-            notes: 'Pendiente confirmación'
-        }
-    ];
+async function loadUserProfile() {
+    if (!currentUser) return;
     
-    transactions = sampleTransactions;
-    saveTransactions();
+    try {
+        const usersRef = window.firebaseCollection(window.firebaseDb, 'users');
+        const q = window.firebaseQuery(usersRef, window.firebaseWhere('email', '==', currentUser.email));
+        const querySnapshot = await window.firebaseGetDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const userData = querySnapshot.docs[0].data();
+            userRole = userData.role || 'admin';
+            document.getElementById('user-name').textContent = userData.name || currentUser.email.split('@')[0];
+            document.getElementById('user-role').textContent = userRole === 'admin' ? 'Admin' : 'Socio';
+            
+            // Si es socio, ocultar secciones que no debe ver
+            if (userRole === 'partner') {
+                hideAdminSections();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+function hideAdminSections() {
+    // Ocultar opciones de menú que no son para el socio
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        const page = item.getAttribute('data-page');
+        if (page === 'reports') {
+            item.style.display = 'none';
+        }
+    });
+}
+
+async function loadTransactions() {
+    try {
+        const transactionsRef = window.firebaseCollection(window.firebaseDb, 'transactions');
+        let q = transactionsRef;
+        
+        // Si es socio, solo cargar transacciones de tipo 'rusos'
+        if (userRole === 'partner') {
+            q = window.firebaseQuery(transactionsRef, window.firebaseWhere('type', '==', 'rusos'));
+        }
+        
+        // Escuchar cambios en tiempo real
+        window.firebaseOnSnapshot(q, (snapshot) => {
+            transactions = [];
+            snapshot.forEach((doc) => {
+                transactions.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            updateDashboard();
+            renderRecentTransactions();
+            renderAllTransactions();
+            initCharts();
+        });
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+    }
+}
+
+function logout() {
+    if (confirm('¿Cerrar sesión?')) {
+        window.firebaseSignOut(window.firebaseAuth).then(() => {
+            window.location.href = 'login.html';
+        }).catch((error) => {
+            console.error('Error logging out:', error);
+        });
+    }
 }
 
 function setupEventListeners() {
@@ -337,18 +345,18 @@ function renderAllTransactions() {
     });
 }
 
-function liquidateTransaction(id) {
-    const transaction = transactions.find(t => t.id === id);
-    if (!transaction) return;
-    
+async function liquidateTransaction(id) {
     if (confirm('¿Marcar como liquidado?')) {
-        transaction.liquidated = true;
-        transaction.liquidationDate = new Date().toISOString();
-        saveTransactions();
-        
-        updateDashboard();
-        renderRecentTransactions();
-        renderAllTransactions();
+        try {
+            const transactionRef = window.firebaseDoc(window.firebaseDb, 'transactions', id);
+            await window.firebaseUpdateDoc(transactionRef, {
+                liquidated: true,
+                liquidationDate: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Error liquidating transaction:', error);
+            alert('Error al liquidar la transacción');
+        }
     }
 }
 
@@ -831,16 +839,26 @@ function addTransaction(event) {
     }
     
     transactions.push(transaction);
-    saveTransactions();
+    await saveTransaction(transaction);
     
     closeModal();
     
-    updateDashboard();
-    renderRecentTransactions();
-    renderAllTransactions();
-    initCharts();
-    
     return false;
+}
+
+async function saveTransaction(transaction) {
+    try {
+        const transactionsRef = window.firebaseCollection(window.firebaseDb, 'transactions');
+        await window.firebaseAddDoc(transactionsRef, {
+            ...transaction,
+            userId: currentUser.uid,
+            userEmail: currentUser.email,
+            createdAt: window.firebaseServerTimestamp()
+        });
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        alert('Error al guardar la transacción');
+    }
 }
 
 function closeModal() {
@@ -855,24 +873,19 @@ function editTransaction(id) {
     alert('Función de edición en desarrollo');
 }
 
-function deleteTransaction(id) {
+async function deleteTransaction(id) {
     if (confirm('¿Estás seguro de eliminar esta transacción?')) {
-        transactions = transactions.filter(t => t.id !== id);
-        saveTransactions();
-        
-        updateDashboard();
-        renderRecentTransactions();
-        renderAllTransactions();
-        initCharts();
+        try {
+            await window.firebaseDeleteDoc(window.firebaseDoc(window.firebaseDb, 'transactions', id));
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            alert('Error al eliminar la transacción');
+        }
     }
 }
 
 function generatePDF() {
     alert('Generación de PDF en desarrollo');
-}
-
-function saveTransactions() {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
 }
 
 function formatDate(dateString) {
