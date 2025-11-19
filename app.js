@@ -748,7 +748,7 @@ function calculateGeneral() {
     document.getElementById('general_profit').textContent = formatCurrency(profit);
 }
 
-function addTransaction(event) {
+async function addTransaction(event) {
     event.preventDefault();
     event.stopPropagation();
     
