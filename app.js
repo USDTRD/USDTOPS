@@ -43,14 +43,13 @@ async function loadUserProfile() {
     console.log('Loading user profile...');
     
     try {
-        if (!window.firebaseDb || !window.firebaseCollection) {
+        if (!window.firebaseDb) {
             console.error('Firebase not ready');
             return;
         }
         
-        const usersRef = window.firebaseCollection(window.firebaseDb, 'users');
-        const q = window.firebaseQuery(usersRef, window.firebaseWhere('email', '==', currentUser.email));
-        const querySnapshot = await window.firebaseGetDocs(q);
+        const usersRef = window.firebaseDb.collection('users');
+        const querySnapshot = await usersRef.where('email', '==', currentUser.email).get();
         
         console.log('User query complete, docs found:', querySnapshot.size);
         console.log('User query complete, docs found:', querySnapshot.size);
@@ -91,24 +90,23 @@ async function loadTransactions() {
     console.log('Loading transactions...');
     
     try {
-        if (!window.firebaseDb || !window.firebaseCollection) {
+        if (!window.firebaseDb) {
             console.error('Firebase not ready for transactions');
             return;
         }
         
-        const transactionsRef = window.firebaseCollection(window.firebaseDb, 'transactions');
-        let q = transactionsRef;
+        let query = window.firebaseDb.collection('transactions');
         
         // Si es socio, solo cargar transacciones de tipo 'rusos'
         if (userRole === 'partner') {
             console.log('Partner mode - filtering rusos only');
-            q = window.firebaseQuery(transactionsRef, window.firebaseWhere('type', '==', 'rusos'));
+            query = query.where('type', '==', 'rusos');
         }
         
         console.log('Setting up snapshot listener...');
         
         // Escuchar cambios en tiempo real
-        window.firebaseOnSnapshot(q, (snapshot) => {
+        query.onSnapshot((snapshot) => {
             console.log('Snapshot received, docs:', snapshot.size);
             transactions = [];
             snapshot.forEach((doc) => {
@@ -133,7 +131,8 @@ async function loadTransactions() {
 
 function logout() {
     if (confirm('¿Cerrar sesión?')) {
-        window.firebaseSignOut(window.firebaseAuth).then(() => {
+        window.firebaseAuth.signOut().then(() => {
+            console.log('Logged out successfully');
             window.location.href = 'login.html';
         }).catch((error) => {
             console.error('Error logging out:', error);
@@ -394,11 +393,11 @@ function renderAllTransactions() {
 async function liquidateTransaction(id) {
     if (confirm('¿Marcar como liquidado?')) {
         try {
-            const transactionRef = window.firebaseDoc(window.firebaseDb, 'transactions', id);
-            await window.firebaseUpdateDoc(transactionRef, {
+            await window.firebaseDb.collection('transactions').doc(id).update({
                 liquidated: true,
                 liquidationDate: new Date().toISOString()
             });
+            console.log('Transaction liquidated');
         } catch (error) {
             console.error('Error liquidating transaction:', error);
             alert('Error al liquidar la transacción');
@@ -894,13 +893,14 @@ function addTransaction(event) {
 
 async function saveTransaction(transaction) {
     try {
-        const transactionsRef = window.firebaseCollection(window.firebaseDb, 'transactions');
-        await window.firebaseAddDoc(transactionsRef, {
+        const transactionsRef = window.firebaseDb.collection('transactions');
+        await transactionsRef.add({
             ...transaction,
             userId: currentUser.uid,
             userEmail: currentUser.email,
-            createdAt: window.firebaseServerTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        console.log('Transaction saved successfully');
     } catch (error) {
         console.error('Error saving transaction:', error);
         alert('Error al guardar la transacción');
@@ -922,7 +922,8 @@ function editTransaction(id) {
 async function deleteTransaction(id) {
     if (confirm('¿Estás seguro de eliminar esta transacción?')) {
         try {
-            await window.firebaseDeleteDoc(window.firebaseDoc(window.firebaseDb, 'transactions', id));
+            await window.firebaseDb.collection('transactions').doc(id).delete();
+            console.log('Transaction deleted');
         } catch (error) {
             console.error('Error deleting transaction:', error);
             alert('Error al eliminar la transacción');
