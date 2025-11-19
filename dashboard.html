@@ -63,10 +63,17 @@
                 console.log('User logged in:', user.email);
                 // Store current user
                 window.currentUser = user;
-                // Initialize app after auth
-                if (window.initializeAppAfterAuth) {
-                    window.initializeAppAfterAuth();
-                }
+                
+                // Load app.js after Firebase is ready
+                const script = document.createElement('script');
+                script.src = 'app.js';
+                script.onload = () => {
+                    console.log('App.js loaded, initializing...');
+                    if (window.initializeAppAfterAuth) {
+                        window.initializeAppAfterAuth();
+                    }
+                };
+                document.body.appendChild(script);
             }
         });
     </script>
@@ -500,7 +507,5 @@
             </form>
         </div>
     </div>
-
-    <script src="app.js"></script>
 </body>
 </html>
