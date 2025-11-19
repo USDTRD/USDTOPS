@@ -307,8 +307,143 @@ body {
     font-weight: 600;
 }
 
-/* Transactions Table */
-.recent-transactions, .transactions-table {
+/* Transactions List (Compact View) */
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transaction-item {
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.transaction-item:hover, .transaction-item:active {
+    background: var(--surface);
+    transform: translateX(4px);
+}
+
+.transaction-item.expanded {
+    background: var(--surface);
+}
+
+.transaction-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.transaction-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.transaction-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.transaction-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.transaction-client {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transaction-amounts {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.transaction-amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.transaction-profit {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--success);
+}
+
+.transaction-arrow {
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+
+.transaction-item.expanded .transaction-arrow {
+    transform: rotate(90deg);
+}
+
+.transaction-details {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.transaction-item.expanded .transaction-details {
+    display: block;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.transaction-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.transaction-actions button {
+    flex: 1;
+}
+
+/* Recent Transactions Container */
+.recent-transactions {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
