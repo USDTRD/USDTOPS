@@ -779,7 +779,6 @@ async function addTransaction(event) {
     }
     
     let transaction = {
-        id: Date.now(),
         date: new Date(formData.get('date')).toISOString(),
         type: type,
         status: 'completed',
@@ -901,7 +900,7 @@ async function addTransaction(event) {
         transaction.dopAmount = currency === 'dop' ? amount : 0;
     }
     
-    transactions.push(transaction);
+    // Guardar en Firebase (el snapshot listener actualizará automáticamente la UI)
     await saveTransaction(transaction);
     
     closeModal();
