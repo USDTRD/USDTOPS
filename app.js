@@ -397,16 +397,25 @@ function renderAllTransactions() {
 }
 
 async function liquidateTransaction(id) {
+    console.log('liquidateTransaction called with id:', id, 'type:', typeof id);
+    
     if (confirm('¿Marcar como liquidado?')) {
         try {
-            await window.firebaseDb.collection('transactions').doc(id).update({
+            console.log('Attempting to liquidate transaction:', id);
+            const docRef = window.firebaseDb.collection('transactions').doc(id);
+            console.log('Document reference created');
+            
+            await docRef.update({
                 liquidated: true,
                 liquidationDate: new Date().toISOString()
             });
-            console.log('Transaction liquidated');
+            
+            console.log('Transaction liquidated successfully');
         } catch (error) {
             console.error('Error liquidating transaction:', error);
-            alert('Error al liquidar la transacción');
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            alert('Error al liquidar la transacción: ' + error.message);
         }
     }
 }
@@ -929,13 +938,18 @@ function editTransaction(id) {
 }
 
 async function deleteTransaction(id) {
+    console.log('deleteTransaction called with id:', id, 'type:', typeof id);
+    
     if (confirm('¿Estás seguro de eliminar esta transacción?')) {
         try {
+            console.log('Attempting to delete transaction:', id);
             await window.firebaseDb.collection('transactions').doc(id).delete();
-            console.log('Transaction deleted');
+            console.log('Transaction deleted successfully');
         } catch (error) {
             console.error('Error deleting transaction:', error);
-            alert('Error al eliminar la transacción');
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
+            alert('Error al eliminar la transacción: ' + error.message);
         }
     }
 }
