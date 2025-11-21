@@ -263,8 +263,11 @@ function renderRecentTransactions() {
     // Agregar event listeners para expandir/contraer
     container.querySelectorAll('.transaction-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            // No expandir si se clickeó un botón
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            // No expandir si se clickeó un botón o está dentro de transaction-actions
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.closest('button') || 
+                e.target.closest('.transaction-actions')) {
+                e.stopPropagation();
                 return;
             }
             this.classList.toggle('expanded');
@@ -274,7 +277,7 @@ function renderRecentTransactions() {
 
 function createTransactionItem(t, showActions = true) {
     const liquidationBtn = (t.type === 'betcris' || t.type === 'rusos') && !t.liquidated 
-        ? `<button class="btn-liquidate" onclick="event.stopPropagation(); liquidateTransaction(${t.id})">Liquidar</button>`
+        ? `<button class="btn-liquidate" onclick="liquidateTransaction('${t.id}'); return false;">Liquidar</button>`
         : '';
     
     const liquidationStatus = t.liquidated 
@@ -326,13 +329,13 @@ function createTransactionItem(t, showActions = true) {
                 ${showActions ? `
                 <div class="transaction-actions">
                     ${liquidationBtn}
-                    <button class="btn-secondary" onclick="event.stopPropagation(); editTransaction(${t.id})">
+                    <button class="btn-secondary" onclick="editTransaction('${t.id}'); return false;">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                             <path d="M11.333 2A1.886 1.886 0 0114 4.667l-9 9-3.667 1 1-3.667 9-9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Editar
                     </button>
-                    <button class="btn-secondary" style="color: var(--danger);" onclick="event.stopPropagation(); deleteTransaction(${t.id})">
+                    <button class="btn-secondary" style="color: var(--danger);" onclick="deleteTransaction('${t.id}'); return false;">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                             <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
@@ -381,8 +384,11 @@ function renderAllTransactions() {
     // Agregar event listeners para expandir/contraer
     container.querySelectorAll('.transaction-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            // No expandir si se clickeó un botón
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            // No expandir si se clickeó un botón o está dentro de transaction-actions
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.closest('button') || 
+                e.target.closest('.transaction-actions')) {
+                e.stopPropagation();
                 return;
             }
             this.classList.toggle('expanded');
@@ -426,8 +432,11 @@ function filterTransactions() {
     // Agregar event listeners para expandir/contraer
     container.querySelectorAll('.transaction-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            // No expandir si se clickeó un botón
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            // No expandir si se clickeó un botón o está dentro de transaction-actions
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.closest('button') || 
+                e.target.closest('.transaction-actions')) {
+                e.stopPropagation();
                 return;
             }
             this.classList.toggle('expanded');
